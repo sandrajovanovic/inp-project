@@ -1,3 +1,6 @@
+// Backend URL
+const BACKEND_URL = "https://inp-project.onrender.com";
+
 const form = document.getElementById("url-form");
 const urlInput = document.getElementById("url-input");
 const loader = document.getElementById("loader");
@@ -11,6 +14,7 @@ const device = document.getElementById("device");
 
 const rumTableBody = document.querySelector("#rum-table tbody");
 
+// Submitting the URL for synthetic analysis
 form.addEventListener("submit", async (e) => {
   e.preventDefault();
   const url = urlInput.value.trim();
@@ -21,7 +25,9 @@ form.addEventListener("submit", async (e) => {
   errorDiv.textContent = "";
 
   try {
-    const res = await fetch(`/analyze?url=${encodeURIComponent(url)}`);
+    const res = await fetch(
+      `${BACKEND_URL}/analyze?url=${encodeURIComponent(url)}`
+    );
     const data = await res.json();
 
     if (data.error)
@@ -48,9 +54,9 @@ form.addEventListener("submit", async (e) => {
   }
 });
 
-// Real-time RUM stream
+// Real-time RUM stream from Render backend
 function initRUMStream() {
-  const evtSource = new EventSource("/rum-stream");
+  const evtSource = new EventSource(`${BACKEND_URL}/rum-stream`);
   evtSource.onmessage = function (event) {
     const item = JSON.parse(event.data);
 
@@ -69,5 +75,4 @@ function initRUMStream() {
   };
 }
 
-// Pokreni SSE odmah
 initRUMStream();

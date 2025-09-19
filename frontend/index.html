@@ -9,6 +9,8 @@
     <!-- Real User Monitoring (RUM) -->
     <script src="https://unpkg.com/web-vitals@3.3.0/dist/web-vitals.iife.js"></script>
     <script>
+      const BACKEND_URL = "https://inp-project.onrender.com";
+
       function sendRUMData(metric) {
         if (metric.name !== "INP") return;
 
@@ -23,7 +25,7 @@
           pageUrl: window.location.href,
         };
 
-        fetch("http://localhost:3000/rum", {
+        fetch(`${BACKEND_URL}/rum`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(rumPayload),
@@ -88,25 +90,24 @@
 
     <script src="app.js"></script>
     <script>
-      // Automatsko osvežavanje RUM tabele svakih 5 sekundi
       async function refreshRUMTable() {
         try {
-          const res = await fetch("/rum-data");
+          const res = await fetch(`${BACKEND_URL}/rum-data`);
           const data = await res.json();
           const rumTableBody = document.querySelector("#rum-table tbody");
           rumTableBody.innerHTML = "";
           data.forEach((item) => {
             const row = document.createElement("tr");
             row.innerHTML = `
-            <td>${item.timestamp}</td>
-            <td>${item.inp}</td>
-            <td>${item.element}</td>
-            <td>${item.device}</td>
-            <td>${item.browser}</td>
-            <td>${item.os}</td>
-            <td>${item.connection}</td>
-            <td>${item.pageUrl}</td>
-          `;
+              <td>${item.timestamp}</td>
+              <td>${item.inp}</td>
+              <td>${item.element}</td>
+              <td>${item.device}</td>
+              <td>${item.browser}</td>
+              <td>${item.os}</td>
+              <td>${item.connection}</td>
+              <td>${item.pageUrl}</td>
+            `;
             rumTableBody.appendChild(row);
           });
         } catch (err) {
@@ -114,8 +115,8 @@
         }
       }
 
-      setInterval(refreshRUMTable, 5000); // osvežava svakih 5 sekundi
-      refreshRUMTable(); // odmah učitaj podatke
+      setInterval(refreshRUMTable, 5000);
+      refreshRUMTable();
     </script>
   </body>
 </html>
