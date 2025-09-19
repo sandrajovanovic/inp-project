@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>JavaScript INP Analyzer</title>
+    <link rel="stylesheet" href="style.css" />
+
+    <!-- Real User Monitoring (RUM) -->
+    <script src="https://unpkg.com/web-vitals@3.3.0/dist/web-vitals.iife.js"></script>
+    <script>
+      function sendRUMData(metric) {
+        if (metric.name !== "INP") return;
+
+        const rumPayload = {
+          timestamp: new Date().toISOString(),
+          inp: metric.value.toFixed(0),
+          element: metric.element ? metric.element : "unknown",
+          device: navigator.userAgent,
+          browser: navigator.userAgent,
+          os: navigator.platform,
+          connection: navigator.connection?.effectiveType || "unknown",
+          pageUrl: window.location.href,
+        };
+
+        fetch("http://localhost:3000/rum", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(rumPayload),
+        }).catch(console.error);
+      }
+
+      if (typeof webVitals !== "undefined") {
+        webVitals.onINP(sendRUMData);
+      } else {
+        console.error("webVitals not loaded!");
+      }
+    </script>
+  </head>
+  <body>
+    <h1>JavaScript INP Analyzer</h1>
+
+    <form id="url-form">
+      <input type="url" id="url-input" placeholder="Enter page URL" required />
+      <button type="submit">Analyze</button>
+    </form>
+
+    <div id="loader" style="display: none">Analyzing...</div>
+    <div id="error"></div>
+
+    <div id="results" style="display: none">
+      <h2 id="results-url"></h2>
+      <p id="test-run"></p>
+      <p id="device"></p>
+
+      <h3>Synthetic test</h3>
+      <table id="metrics-table">
+        <thead>
+          <tr>
+            <th>Metric</th>
+            <th>Value</th>
+            <th>Status</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+
+      <h3>Real User Monitoring (RUM)</h3>
+      <p>
+        (Reflects actual user experiences and highlights real slow interactions)
+      </p>
+      <table id="rum-table">
+        <thead>
+          <tr>
+            <th>Timestamp</th>
+            <th>INP (ms)</th>
+            <th>Element</th>
+            <th>Device</th>
+            <th>Browser</th>
+            <th>OS</th>
+            <th>Connection</th>
+            <th>Page URL</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
+
+    <script src="app.js"></script>
+    <script>
+      // Automatsko osvežavanje RUM tabele svakih 5 sekundi
+      async function refreshRUMTable() {
+        try {
+          const res = await fetch("/rum-data");
+          const data = await res.json();
+          const rumTableBody = document.querySelector("#rum-table tbody");
+          rumTableBody.innerHTML = "";
+          data.forEach((item) => {
+            const row = document.createElement("tr");
+            row.innerHTML = `
+            <td>${item.timestamp}</td>
+            <td>${item.inp}</td>
+            <td>${item.element}</td>
+            <td>${item.device}</td>
+            <td>${item.browser}</td>
+            <td>${item.os}</td>
+            <td>${item.connection}</td>
+            <td>${item.pageUrl}</td>
+          `;
+            rumTableBody.appendChild(row);
+          });
+        } catch (err) {
+          console.error("Error fetching RUM data:", err);
+        }
+      }
+
+      setInterval(refreshRUMTable, 5000); // osvežava svakih 5 sekundi
+      refreshRUMTable(); // odmah učitaj podatke
+    </script>
+  </body>
+</html>
