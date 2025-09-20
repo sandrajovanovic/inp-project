@@ -5,7 +5,7 @@ import { fileURLToPath } from "url";
 import mongoose from "mongoose";
 import dotenv from "dotenv";
 
-dotenv.config(); // učitava .env fajl
+dotenv.config();
 
 const app = express();
 app.use(cors());
@@ -14,7 +14,7 @@ app.use(express.json());
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// MongoDB Atlas connection using .env
+// MongoDB connection
 const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@cluster0.x8m3ygf.mongodb.net/${process.env.DB_NAME}?retryWrites=true&w=majority&appName=Cluster0`;
 
 mongoose
@@ -22,9 +22,9 @@ mongoose
   .then(() => console.log("✅ MongoDB connected"))
   .catch((err) => console.error("❌ MongoDB connection error:", err));
 
-// MongoDB schema
+// RUM Schema
 const RumSchema = new mongoose.Schema({
-  timestamp: { type: Date, required: true }, // bolje kao Date
+  timestamp: { type: String, required: true },
   inp: { type: Number, required: true },
   element: { type: String, required: true },
   device: String,
@@ -34,22 +34,21 @@ const RumSchema = new mongoose.Schema({
   pageUrl: String,
 });
 
-// Model → kolekcija u bazi biće "rums"
-const RumModel = mongoose.model("Rum", RumSchema);
+// **OVO JE BITNO**: koristi kolekciju inpValues
+const RumModel = mongoose.model("RumModel", RumSchema, "inpValues");
 
-// Memorija za SSE klijente
+// SSE clients
 const clients = [];
 
 // Serve frontend
 app.use(express.static(path.join(__dirname, "../frontend")));
 
-// POST endpoint za čuvanje RUM podataka
+// POST /rum
 app.post("/rum", async (req, res) => {
   try {
     const doc = new RumModel(req.body);
     await doc.save();
 
-    // Push na SSE klijente
     const dataString = JSON.stringify(req.body);
     clients.forEach((client) => {
       try {
@@ -66,10 +65,10 @@ app.post("/rum", async (req, res) => {
   }
 });
 
-// GET endpoint za dobijanje svih RUM podataka
+// GET /rum-data
 app.get("/rum-data", async (req, res) => {
   try {
-    const data = await RumModel.find().sort({ timestamp: -1 }).limit(100);
+    const data = await RumModel.find().sort({ timestamp: 1 });
     res.json(data);
   } catch (err) {
     console.error("GET /rum-data error:", err);
@@ -77,7 +76,7 @@ app.get("/rum-data", async (req, res) => {
   }
 });
 
-// SSE stream za live podatke
+// SSE /rum-stream
 app.get("/rum-stream", (req, res) => {
   res.setHeader("Content-Type", "text/event-stream");
   res.setHeader("Cache-Control", "no-cache");
@@ -94,8 +93,28 @@ app.get("/rum-stream", (req, res) => {
   });
 });
 
+// GET /analyze (synthetic)
+app.get("/analyze", (req, res) => {
+  const { url } = req.query;
+  if (!url) return res.status(400).json({ error: "URL is required" });
+
+  const syntheticMetrics = [
+    { name: "INP (lab)", value: 219, status: "Needs Improvement" },
+    { name: "TBT", value: 142, status: "Good" },
+    { name: "JS blocking time", value: 213, status: "High" },
+    { name: "Long tasks count", value: 5, status: "Needs Improvement" },
+  ];
+
+  res.json({
+    url,
+    testRun: new Date().toISOString(),
+    device: "Desktop (Chrome, 4G, 1920x1080)",
+    metrics: syntheticMetrics,
+  });
+});
+
 // Start server
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () =>
-  console.log(`🚀 Server running on http://localhost:${PORT}`)
+  console.log(`Server running on http://localhost:${PORT}`)
 );

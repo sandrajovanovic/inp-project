@@ -1,4 +1,3 @@
-// Uzimamo backend URL iz globalnog scope-a (definisanog u index.html)
 const BACKEND_URL = window.BACKEND_URL;
 
 const form = document.getElementById("url-form");
@@ -28,14 +27,15 @@ form.addEventListener("submit", async (e) => {
     const res = await fetch(
       `${BACKEND_URL}/analyze?url=${encodeURIComponent(url)}`
     );
+    if (!res.ok) throw new Error(`Server returned ${res.status}`);
     const data = await res.json();
-
-    if (data.error) {
+    if (data.error)
       throw new Error(data.error + (data.details ? ": " + data.details : ""));
-    }
 
     resultsUrl.textContent = `Results overview for ${data.url}`;
-    testRun.textContent = `Test run: ${data.testRun}`;
+    testRun.textContent = `Test run: ${new Date(
+      data.testRun
+    ).toLocaleString()}`;
     device.textContent = `Device simulated: ${data.device}`;
 
     metricsTableBody.innerHTML = "";
@@ -55,12 +55,11 @@ form.addEventListener("submit", async (e) => {
   }
 });
 
-// Real-time RUM stream from Render backend
+// SSE for real-time RUM updates
 function initRUMStream() {
   const evtSource = new EventSource(`${BACKEND_URL}/rum-stream`);
   evtSource.onmessage = function (event) {
     const item = JSON.parse(event.data);
-
     const row = document.createElement("tr");
     row.innerHTML = `
       <td>${new Date(item.timestamp).toLocaleString()}</td>
@@ -73,21 +72,17 @@ function initRUMStream() {
       <td>${item.pageUrl || ""}</td>
     `;
     rumTableBody.appendChild(row);
-
-    // Opcionalno: scroll na dno tabele
     rumTableBody.parentElement.scrollTop =
       rumTableBody.parentElement.scrollHeight;
   };
 }
 
-// Učitaj postojeće RUM podatke sa backend-a
+// Load historical RUM data
 async function loadRUMData() {
   try {
     const res = await fetch(`${BACKEND_URL}/rum-data`);
     const data = await res.json();
-
     rumTableBody.innerHTML = "";
-
     data.forEach((item) => {
       const row = document.createElement("tr");
       row.innerHTML = `
@@ -107,6 +102,5 @@ async function loadRUMData() {
   }
 }
 
-// Pokreni SSE stream i učitaj istorijske podatke
 loadRUMData();
 initRUMStream();

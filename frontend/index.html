@@ -8,16 +8,15 @@
 
     <!-- Backend URL globalno definisan -->
     <script>
-      window.BACKEND_URL = "https://inp-project.onrender.com";
+      window.BACKEND_URL = "https://inp-project.onrender.com"; // promeni na Render URL
     </script>
 
-    <!-- Real User Monitoring (RUM) -->
+    <!-- Web Vitals za RUM -->
     <script src="https://unpkg.com/web-vitals@3.3.0/dist/web-vitals.iife.js"></script>
     <script>
       function sendRUMData(metric) {
         if (metric.name !== "INP") return;
 
-        // Napravi čitljiv opis elementa
         let elementDesc = "unknown";
         if (metric.entries?.[0]?.target) {
           const t = metric.entries[0].target;
@@ -106,40 +105,5 @@
     </div>
 
     <script src="app.js"></script>
-
-    <script>
-      // Učitaj postojeće RUM podatke i prikaži u tabeli
-      async function loadRUMData() {
-        try {
-          const res = await fetch(`${window.BACKEND_URL}/rum-data`);
-          const data = await res.json();
-
-          const tbody = document.querySelector("#rum-table tbody");
-          tbody.innerHTML = "";
-
-          data.forEach((row) => {
-            const tr = document.createElement("tr");
-
-            tr.innerHTML = `
-              <td>${new Date(row.timestamp).toLocaleString()}</td>
-              <td>${row.inp}</td>
-              <td>${row.element}</td>
-              <td>${row.device || "unknown"}</td>
-              <td>${row.browser || "unknown"}</td>
-              <td>${row.os || "unknown"}</td>
-              <td>${row.connection || "unknown"}</td>
-              <td>${row.pageUrl || ""}</td>
-            `;
-
-            tbody.appendChild(tr);
-          });
-        } catch (err) {
-          console.error("Error loading RUM data:", err);
-        }
-      }
-
-      // Učitaj odmah kad se otvori stranica
-      loadRUMData();
-    </script>
   </body>
 </html>
