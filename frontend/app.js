@@ -1,5 +1,5 @@
-// Backend URL
-const BACKEND_URL = "https://inp-project.onrender.com";
+// Uzimamo backend URL iz globalnog scope-a (definisanog u index.html)
+const BACKEND_URL = window.BACKEND_URL;
 
 const form = document.getElementById("url-form");
 const urlInput = document.getElementById("url-input");
@@ -30,8 +30,9 @@ form.addEventListener("submit", async (e) => {
     );
     const data = await res.json();
 
-    if (data.error)
+    if (data.error) {
       throw new Error(data.error + (data.details ? ": " + data.details : ""));
+    }
 
     resultsUrl.textContent = `Results overview for ${data.url}`;
     testRun.textContent = `Test run: ${data.testRun}`;
@@ -62,17 +63,50 @@ function initRUMStream() {
 
     const row = document.createElement("tr");
     row.innerHTML = `
-      <td>${item.timestamp}</td>
+      <td>${new Date(item.timestamp).toLocaleString()}</td>
       <td>${item.inp}</td>
       <td>${item.element}</td>
-      <td>${item.device}</td>
-      <td>${item.browser}</td>
-      <td>${item.os}</td>
-      <td>${item.connection}</td>
-      <td>${item.pageUrl}</td>
+      <td>${item.device || "unknown"}</td>
+      <td>${item.browser || "unknown"}</td>
+      <td>${item.os || "unknown"}</td>
+      <td>${item.connection || "unknown"}</td>
+      <td>${item.pageUrl || ""}</td>
     `;
     rumTableBody.appendChild(row);
+
+    // Opcionalno: scroll na dno tabele
+    rumTableBody.parentElement.scrollTop =
+      rumTableBody.parentElement.scrollHeight;
   };
 }
 
+// Učitaj postojeće RUM podatke sa backend-a
+async function loadRUMData() {
+  try {
+    const res = await fetch(`${BACKEND_URL}/rum-data`);
+    const data = await res.json();
+
+    rumTableBody.innerHTML = "";
+
+    data.forEach((item) => {
+      const row = document.createElement("tr");
+      row.innerHTML = `
+        <td>${new Date(item.timestamp).toLocaleString()}</td>
+        <td>${item.inp}</td>
+        <td>${item.element}</td>
+        <td>${item.device || "unknown"}</td>
+        <td>${item.browser || "unknown"}</td>
+        <td>${item.os || "unknown"}</td>
+        <td>${item.connection || "unknown"}</td>
+        <td>${item.pageUrl || ""}</td>
+      `;
+      rumTableBody.appendChild(row);
+    });
+  } catch (err) {
+    console.error("Error loading RUM data:", err);
+  }
+}
+
+// Pokreni SSE stream i učitaj istorijske podatke
+loadRUMData();
 initRUMStream();

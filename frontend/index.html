@@ -6,28 +6,47 @@
     <title>JavaScript INP Analyzer</title>
     <link rel="stylesheet" href="style.css" />
 
+    <!-- Backend URL globalno definisan -->
+    <script>
+      window.BACKEND_URL = "https://inp-project.onrender.com";
+    </script>
+
     <!-- Real User Monitoring (RUM) -->
     <script src="https://unpkg.com/web-vitals@3.3.0/dist/web-vitals.iife.js"></script>
     <script>
       function sendRUMData(metric) {
         if (metric.name !== "INP") return;
 
+        // Napravi čitljiv opis elementa
+        let elementDesc = "unknown";
+        if (metric.entries?.[0]?.target) {
+          const t = metric.entries[0].target;
+          elementDesc =
+            t.tagName +
+            (t.id ? "#" + t.id : "") +
+            (t.className ? "." + t.className.replace(/\s/g, ".") : "");
+        }
+
         const rumPayload = {
           timestamp: new Date().toISOString(),
-          inp: metric.value.toFixed(0),
-          element: metric.element ? metric.element : "unknown",
-          device: navigator.userAgent,
+          inp: Number(metric.value.toFixed(2)),
+          element: elementDesc,
+          device: /Mobi|Android/i.test(navigator.userAgent)
+            ? "Mobile"
+            : /Tablet|iPad/i.test(navigator.userAgent)
+            ? "Tablet"
+            : "Desktop",
           browser: navigator.userAgent,
           os: navigator.platform,
           connection: navigator.connection?.effectiveType || "unknown",
           pageUrl: window.location.href,
         };
 
-        fetch(`${BACKEND_URL}/rum`, {
+        fetch(`${window.BACKEND_URL}/rum`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(rumPayload),
-        }).catch(console.error);
+        }).catch((err) => console.error("RUM send error:", err));
       }
 
       if (typeof webVitals !== "undefined") {
@@ -87,34 +106,40 @@
     </div>
 
     <script src="app.js"></script>
+
     <script>
-      async function refreshRUMTable() {
+      // Učitaj postojeće RUM podatke i prikaži u tabeli
+      async function loadRUMData() {
         try {
-          const res = await fetch(`${BACKEND_URL}/rum-data`);
+          const res = await fetch(`${window.BACKEND_URL}/rum-data`);
           const data = await res.json();
-          const rumTableBody = document.querySelector("#rum-table tbody");
-          rumTableBody.innerHTML = "";
-          data.forEach((item) => {
-            const row = document.createElement("tr");
-            row.innerHTML = `
-              <td>${item.timestamp}</td>
-              <td>${item.inp}</td>
-              <td>${item.element}</td>
-              <td>${item.device}</td>
-              <td>${item.browser}</td>
-              <td>${item.os}</td>
-              <td>${item.connection}</td>
-              <td>${item.pageUrl}</td>
+
+          const tbody = document.querySelector("#rum-table tbody");
+          tbody.innerHTML = "";
+
+          data.forEach((row) => {
+            const tr = document.createElement("tr");
+
+            tr.innerHTML = `
+              <td>${new Date(row.timestamp).toLocaleString()}</td>
+              <td>${row.inp}</td>
+              <td>${row.element}</td>
+              <td>${row.device || "unknown"}</td>
+              <td>${row.browser || "unknown"}</td>
+              <td>${row.os || "unknown"}</td>
+              <td>${row.connection || "unknown"}</td>
+              <td>${row.pageUrl || ""}</td>
             `;
-            rumTableBody.appendChild(row);
+
+            tbody.appendChild(tr);
           });
         } catch (err) {
-          console.error("Error fetching RUM data:", err);
+          console.error("Error loading RUM data:", err);
         }
       }
 
-      setInterval(refreshRUMTable, 5000);
-      refreshRUMTable();
+      // Učitaj odmah kad se otvori stranica
+      loadRUMData();
     </script>
   </body>
 </html>
