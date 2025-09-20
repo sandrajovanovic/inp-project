@@ -34,7 +34,7 @@ const RumSchema = new mongoose.Schema({
   pageUrl: String,
 });
 
-// **OVO JE BITNO**: koristi kolekciju inpValues
+// Koristi kolekciju inpValues
 const RumModel = mongoose.model("RumModel", RumSchema, "inpValues");
 
 // SSE clients
@@ -65,10 +65,13 @@ app.post("/rum", async (req, res) => {
   }
 });
 
-// GET /rum-data
+// GET /rum-data (može filter po URL-u)
 app.get("/rum-data", async (req, res) => {
   try {
-    const data = await RumModel.find().sort({ timestamp: 1 });
+    const filter = {};
+    if (req.query.url) filter.pageUrl = req.query.url;
+
+    const data = await RumModel.find(filter).sort({ timestamp: 1 });
     res.json(data);
   } catch (err) {
     console.error("GET /rum-data error:", err);

@@ -13,12 +13,15 @@ const device = document.getElementById("device");
 
 const rumTableBody = document.querySelector("#rum-table tbody");
 
+let currentURL = ""; // čuvamo URL koji je korisnik uneo
+
 // Submitting the URL for synthetic analysis
 form.addEventListener("submit", async (e) => {
   e.preventDefault();
   const url = urlInput.value.trim();
   if (!url) return;
 
+  currentURL = url; // postavljamo trenutno izabrani URL
   loader.style.display = "block";
   resultsDiv.style.display = "none";
   errorDiv.textContent = "";
@@ -45,6 +48,9 @@ form.addEventListener("submit", async (e) => {
       metricsTableBody.appendChild(row);
     });
 
+    // Učitavamo RUM podatke samo za uneseni URL
+    loadRUMData(currentURL);
+
     loader.style.display = "none";
     resultsDiv.style.display = "block";
   } catch (err) {
@@ -55,11 +61,13 @@ form.addEventListener("submit", async (e) => {
   }
 });
 
-// SSE for real-time RUM updates
+// SSE for real-time RUM updates filtered by current URL
 function initRUMStream() {
   const evtSource = new EventSource(`${BACKEND_URL}/rum-stream`);
   evtSource.onmessage = function (event) {
     const item = JSON.parse(event.data);
+    if (item.pageUrl !== currentURL) return; // filtriranje po URL-u
+
     const row = document.createElement("tr");
     row.innerHTML = `
       <td>${new Date(item.timestamp).toLocaleString()}</td>
@@ -77,10 +85,13 @@ function initRUMStream() {
   };
 }
 
-// Load historical RUM data
-async function loadRUMData() {
+// Load historical RUM data for a specific URL
+async function loadRUMData(url) {
+  if (!url) return;
   try {
-    const res = await fetch(`${BACKEND_URL}/rum-data`);
+    const res = await fetch(
+      `${BACKEND_URL}/rum-data?url=${encodeURIComponent(url)}`
+    );
     const data = await res.json();
     rumTableBody.innerHTML = "";
     data.forEach((item) => {
@@ -102,5 +113,4 @@ async function loadRUMData() {
   }
 }
 
-loadRUMData();
 initRUMStream();
