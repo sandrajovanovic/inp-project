@@ -24,9 +24,9 @@ mongoose
 
 // MongoDB schema
 const RumSchema = new mongoose.Schema({
-  timestamp: String,
-  inp: Number,
-  element: String,
+  timestamp: { type: Date, required: true }, // bolje kao Date
+  inp: { type: Number, required: true },
+  element: { type: String, required: true },
   device: String,
   browser: String,
   os: String,
@@ -34,6 +34,7 @@ const RumSchema = new mongoose.Schema({
   pageUrl: String,
 });
 
+// Model → kolekcija u bazi biće "rums"
 const RumModel = mongoose.model("Rum", RumSchema);
 
 // Memorija za SSE klijente
@@ -42,7 +43,7 @@ const clients = [];
 // Serve frontend
 app.use(express.static(path.join(__dirname, "../frontend")));
 
-// POST endpoint
+// POST endpoint za čuvanje RUM podataka
 app.post("/rum", async (req, res) => {
   try {
     const doc = new RumModel(req.body);
@@ -65,10 +66,10 @@ app.post("/rum", async (req, res) => {
   }
 });
 
-// GET endpoint
+// GET endpoint za dobijanje svih RUM podataka
 app.get("/rum-data", async (req, res) => {
   try {
-    const data = await RumModel.find().sort({ timestamp: 1 });
+    const data = await RumModel.find().sort({ timestamp: -1 }).limit(100);
     res.json(data);
   } catch (err) {
     console.error("GET /rum-data error:", err);
@@ -76,7 +77,7 @@ app.get("/rum-data", async (req, res) => {
   }
 });
 
-// SSE /rum-stream
+// SSE stream za live podatke
 app.get("/rum-stream", (req, res) => {
   res.setHeader("Content-Type", "text/event-stream");
   res.setHeader("Cache-Control", "no-cache");
@@ -96,5 +97,5 @@ app.get("/rum-stream", (req, res) => {
 // Start server
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () =>
-  console.log(`Server running on http://localhost:${PORT}`)
+  console.log(`🚀 Server running on http://localhost:${PORT}`)
 );
