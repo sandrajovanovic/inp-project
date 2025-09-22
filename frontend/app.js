@@ -42,9 +42,33 @@ form.addEventListener("submit", async (e) => {
     device.textContent = `Device simulated: ${data.device}`;
 
     metricsTableBody.innerHTML = "";
+
+    // mapa jedinica po metric name
+    const unitsMap = {
+      "INP (lab)": "ms",
+      INP: "ms",
+      TBT: "ms",
+      "JS blocking time": "ms",
+      "Long tasks count": "", // samo broj
+    };
+
+    // mapa boja po statusu
+    const statusColors = {
+      Good: "green",
+      "Needs Improvement": "orange",
+      Poor: "red",
+    };
+
     data.metrics.forEach((metric) => {
+      const unit = unitsMap[metric.name] || "";
+      const color = statusColors[metric.status] || "black"; // fallback
+
       const row = document.createElement("tr");
-      row.innerHTML = `<td>${metric.name}</td><td>${metric.value}</td><td>${metric.status}</td>`;
+      row.innerHTML = `
+    <td>${metric.name}</td>
+    <td>${metric.value}${unit ? " " + unit : ""}</td>
+    <td style="color:${color}; font-weight:bold;">${metric.status}</td>
+  `;
       metricsTableBody.appendChild(row);
     });
 
