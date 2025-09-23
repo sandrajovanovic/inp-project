@@ -68,10 +68,10 @@ form.addEventListener("submit", async (e) => {
 
       const row = document.createElement("tr");
       row.innerHTML = `
-    <td>${metric.name}</td>
-    <td>${metric.value}${unit ? " " + unit : ""}</td>
-    <td style="color:${color}; font-weight:bold;">${metric.status}</td>
-  `;
+        <td>${metric.name}</td>
+        <td>${metric.value}${unit ? " " + unit : ""}</td>
+        <td style="color:${color}; font-weight:bold;">${metric.status}</td>
+      `;
       metricsTableBody.appendChild(row);
     });
 
@@ -119,6 +119,7 @@ async function loadRUMData(url) {
     const res = await fetch(
       `${BACKEND_URL}/rum-data?url=${encodeURIComponent(url)}`
     );
+    if (!res.ok) throw new Error(`Server returned ${res.status}`);
     const data = await res.json();
     rumTableBody.innerHTML = "";
     data.forEach((item) => {
