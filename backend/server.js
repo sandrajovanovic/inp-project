@@ -35,7 +35,6 @@ const RumSchema = new mongoose.Schema({
   pageUrl: String,
 });
 
-// Koristi kolekciju inpValues
 const RumModel = mongoose.model("RumModel", RumSchema, "inpValues");
 
 // SSE clients
@@ -71,7 +70,7 @@ app.post("/rum", async (req, res) => {
   }
 });
 
-// GET /rum-data (može filter po URL-u)
+// GET /rum-data (filter po URL-u)
 app.get("/rum-data", async (req, res) => {
   try {
     const filter = {};
@@ -126,18 +125,21 @@ function getJSMetricStatus(name, value) {
   return "Unknown";
 }
 
-// GET /analyze (synthetic) - pravi Playwright metrics
+// GET /analyze - Playwright metrics (Render-ready)
 app.get("/analyze", async (req, res) => {
   const { url } = req.query;
   if (!url) return res.status(400).json({ error: "URL is required" });
 
   try {
-    const browser = await chromium.launch();
+    const browser = await chromium.launch({
+      headless: true,
+      args: ["--no-sandbox", "--disable-setuid-sandbox"], // cloud safe
+    });
+
     const page = await browser.newPage();
+    await page.goto(url, { waitUntil: "load", timeout: 60000 }); // 60s timeout
 
-    await page.goto(url, { waitUntil: "load" });
-
-    // Merenje INP preko Web Vitals
+    // INP preko Web Vitals
     const metrics = await page.evaluate(() => {
       return new Promise((resolve) => {
         const result = { INP: 0 };
@@ -208,7 +210,7 @@ app.get("/analyze", async (req, res) => {
     });
   } catch (err) {
     console.error("Error in /analyze:", err);
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: err.message, stack: err.stack });
   }
 });
 
