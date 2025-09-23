@@ -21,6 +21,7 @@
     "lighthouse": "^12.8.1",
     "mongodb": "^6.19.0",
     "mongoose": "^8.18.1",
-    "playwright": "^1.55.1"
+    "playwright": "^1.55.1",
+    "puppeteer": "^24.22.2"
   }
 }

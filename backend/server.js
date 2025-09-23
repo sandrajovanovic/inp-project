@@ -4,7 +4,7 @@ import path from "path";
 import { fileURLToPath } from "url";
 import mongoose from "mongoose";
 import dotenv from "dotenv";
-import { chromium } from "playwright";
+import puppeteer from "puppeteer";
 
 dotenv.config();
 
@@ -70,7 +70,7 @@ app.post("/rum", async (req, res) => {
   }
 });
 
-// GET /rum-data (filter po URL-u)
+// GET /rum-data
 app.get("/rum-data", async (req, res) => {
   try {
     const filter = {};
@@ -101,7 +101,7 @@ app.get("/rum-stream", (req, res) => {
   });
 });
 
-// Helper functions for status
+// Helper functions
 function getWebVitalStatus(name, value) {
   if (name === "INP (lab)" || name === "TBT") {
     if (value < 200) return "Good";
@@ -125,19 +125,19 @@ function getJSMetricStatus(name, value) {
   return "Unknown";
 }
 
-// GET /analyze - Playwright metrics (Render-ready)
+// GET /analyze - Puppeteer metrics
 app.get("/analyze", async (req, res) => {
   const { url } = req.query;
   if (!url) return res.status(400).json({ error: "URL is required" });
 
   try {
-    const browser = await chromium.launch({
+    const browser = await puppeteer.launch({
       headless: true,
-      args: ["--no-sandbox", "--disable-setuid-sandbox"], // cloud safe
+      args: ["--no-sandbox", "--disable-setuid-sandbox"],
     });
 
     const page = await browser.newPage();
-    await page.goto(url, { waitUntil: "load", timeout: 60000 }); // 60s timeout
+    await page.goto(url, { waitUntil: "load", timeout: 60000 });
 
     // INP preko Web Vitals
     const metrics = await page.evaluate(() => {
@@ -205,7 +205,7 @@ app.get("/analyze", async (req, res) => {
     res.json({
       url,
       testRun: new Date().toISOString(),
-      device: "Desktop (Chromium, 1920x1080)",
+      device: "Desktop (Puppeteer, 1920x1080)",
       metrics: syntheticMetrics,
     });
   } catch (err) {
