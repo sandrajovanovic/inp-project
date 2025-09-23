@@ -4,6 +4,7 @@ import path from "path";
 import { fileURLToPath } from "url";
 import mongoose from "mongoose";
 import dotenv from "dotenv";
+import { chromium } from "playwright";
 
 dotenv.config();
 
@@ -19,8 +20,8 @@ const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@cluster
 
 mongoose
   .connect(uri)
-  .then(() => console.log("✅ MongoDB connected"))
-  .catch((err) => console.error("❌ MongoDB connection error:", err));
+  .then(() => console.log("MongoDB connected"))
+  .catch((err) => console.error("MongoDB connection error:", err));
 
 // RUM Schema
 const RumSchema = new mongoose.Schema({
@@ -40,8 +41,13 @@ const RumModel = mongoose.model("RumModel", RumSchema, "inpValues");
 // SSE clients
 const clients = [];
 
-// Serve frontend
+// Serve frontend static files
 app.use(express.static(path.join(__dirname, "../frontend")));
+
+// Fallback route for /
+app.get("/", (req, res) => {
+  res.sendFile(path.join(__dirname, "../frontend/index.html"));
+});
 
 // POST /rum
 app.post("/rum", async (req, res) => {
@@ -96,24 +102,114 @@ app.get("/rum-stream", (req, res) => {
   });
 });
 
-// GET /analyze (synthetic)
-app.get("/analyze", (req, res) => {
+// Helper functions for status
+function getWebVitalStatus(name, value) {
+  if (name === "INP (lab)" || name === "TBT") {
+    if (value < 200) return "Good";
+    if (value <= 500) return "Needs Improvement";
+    return "Poor";
+  }
+  return "Unknown";
+}
+
+function getJSMetricStatus(name, value) {
+  if (name === "JS blocking time") {
+    if (value < 200) return "Low";
+    if (value <= 500) return "Medium";
+    return "High";
+  }
+  if (name === "Long tasks count") {
+    if (value < 10) return "Low";
+    if (value <= 50) return "Medium";
+    return "High";
+  }
+  return "Unknown";
+}
+
+// GET /analyze (synthetic) - pravi Playwright metrics
+app.get("/analyze", async (req, res) => {
   const { url } = req.query;
   if (!url) return res.status(400).json({ error: "URL is required" });
 
-  const syntheticMetrics = [
-    { name: "INP (lab)", value: 219, status: "Needs Improvement" },
-    { name: "TBT", value: 142, status: "Good" },
-    { name: "JS blocking time", value: 213, status: "High" },
-    { name: "Long tasks count", value: 5, status: "Needs Improvement" },
-  ];
+  try {
+    const browser = await chromium.launch();
+    const page = await browser.newPage();
 
-  res.json({
-    url,
-    testRun: new Date().toISOString(),
-    device: "Desktop (Chrome, 4G, 1920x1080)",
-    metrics: syntheticMetrics,
-  });
+    await page.goto(url, { waitUntil: "load" });
+
+    // Merenje INP preko Web Vitals
+    const metrics = await page.evaluate(() => {
+      return new Promise((resolve) => {
+        const result = { INP: 0 };
+        const script = document.createElement("script");
+        script.src =
+          "https://unpkg.com/web-vitals@3.3.0/dist/web-vitals.iife.js";
+        script.onload = () => {
+          webVitals.onINP((m) => {
+            result.INP = m.value;
+            resolve(result);
+          });
+        };
+        document.head.appendChild(script);
+      });
+    });
+
+    // Long tasks i JS blocking
+    const jsMetrics = await page.evaluate(() => {
+      let totalBlockingTime = 0;
+      let longTasksCount = 0;
+      const observer = new PerformanceObserver((list) => {
+        for (const entry of list.getEntries()) {
+          totalBlockingTime += entry.duration;
+          longTasksCount++;
+        }
+      });
+      observer.observe({ entryTypes: ["longtask"] });
+      return new Promise((resolve) => {
+        setTimeout(() => {
+          resolve({ jsBlocking: totalBlockingTime, longTasks: longTasksCount });
+        }, 1000);
+      });
+    });
+
+    await browser.close();
+
+    const syntheticMetrics = [
+      {
+        name: "INP (lab)",
+        value: Math.round(metrics.INP || 0),
+        status: getWebVitalStatus("INP (lab)", metrics.INP || 0),
+      },
+      {
+        name: "TBT",
+        value: Math.round(jsMetrics.jsBlocking || 0),
+        status: getWebVitalStatus("TBT", jsMetrics.jsBlocking || 0),
+      },
+      {
+        name: "JS blocking time",
+        value: Math.round(jsMetrics.jsBlocking || 0),
+        status: getJSMetricStatus(
+          "JS blocking time",
+          jsMetrics.jsBlocking || 0
+        ),
+      },
+      {
+        name: "Long tasks count",
+        value: jsMetrics.longTasks || 0,
+        status: getJSMetricStatus("Long tasks count", jsMetrics.longTasks || 0),
+      },
+    ];
+
+    res.json({
+      url,
+      testRun: new Date().toISOString(),
+      device: "Desktop (Chromium, 1920x1080)",
+      metrics: syntheticMetrics,
+    });
+  } catch (err) {
+    console.error("Error in /analyze:", err);
+    res.status(500).json({ error: err.message });
+  }
 });
 
 // Start server

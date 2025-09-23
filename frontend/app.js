@@ -57,6 +57,9 @@ form.addEventListener("submit", async (e) => {
       Good: "green",
       "Needs Improvement": "orange",
       Poor: "red",
+      High: "red",
+      Low: "green",
+      Medium: "orange",
     };
 
     data.metrics.forEach((metric) => {
