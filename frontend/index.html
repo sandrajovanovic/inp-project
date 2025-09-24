@@ -8,51 +8,7 @@
 
     <!-- Backend URL globalno definisan -->
     <script>
-      window.BACKEND_URL = "https://inp-project.onrender.com"; // promeni na Render URL
-    </script>
-
-    <!-- Web Vitals za RUM -->
-    <script src="https://unpkg.com/web-vitals@3.3.0/dist/web-vitals.iife.js"></script>
-    <script>
-      function sendRUMData(metric) {
-        if (metric.name !== "INP") return;
-
-        let elementDesc = "unknown";
-        if (metric.entries?.[0]?.target) {
-          const t = metric.entries[0].target;
-          elementDesc =
-            t.tagName +
-            (t.id ? "#" + t.id : "") +
-            (t.className ? "." + t.className.replace(/\s/g, ".") : "");
-        }
-
-        const rumPayload = {
-          timestamp: new Date().toISOString(),
-          inp: Number(metric.value.toFixed(2)),
-          element: elementDesc,
-          device: /Mobi|Android/i.test(navigator.userAgent)
-            ? "Mobile"
-            : /Tablet|iPad/i.test(navigator.userAgent)
-            ? "Tablet"
-            : "Desktop",
-          browser: navigator.userAgent,
-          os: navigator.platform,
-          connection: navigator.connection?.effectiveType || "unknown",
-          pageUrl: window.location.href,
-        };
-
-        fetch(`${window.BACKEND_URL}/rum`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(rumPayload),
-        }).catch((err) => console.error("RUM send error:", err));
-      }
-
-      if (typeof webVitals !== "undefined") {
-        webVitals.onINP(sendRUMData);
-      } else {
-        console.error("webVitals not loaded!");
-      }
+      window.BACKEND_URL = "https://inp-project.onrender.com";
     </script>
   </head>
   <body>
