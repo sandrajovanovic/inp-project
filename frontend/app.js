@@ -13,7 +13,7 @@ const device = document.getElementById("device");
 
 const rumTableBody = document.querySelector("#rum-table tbody");
 
-let currentURL = ""; // čuvamo URL koji je korisnik uneo
+let currentURL = "";
 
 // Submitting the URL for synthetic analysis
 form.addEventListener("submit", async (e) => {
@@ -48,7 +48,7 @@ form.addEventListener("submit", async (e) => {
       metricsTableBody.appendChild(row);
     });
 
-    // Učitavamo RUM podatke samo za uneseni URL
+    // Ucitavamo RUM podatke samo za uneseni URL
     loadRUMData(currentURL);
 
     loader.style.display = "none";
